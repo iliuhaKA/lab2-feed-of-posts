@@ -1,98 +1,157 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { PostCard } from "@/components/PostCard";
+import { Post, PostsResponse } from "@/types/posts";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+const PAGE_SIZE = 10;
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function PostsScreen(){
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [page, setPage] = useState<number>(1);
+  const [total, setTotal] = useState(0);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadPosts() {
+      setLoading(true);
+      setError(null);
+
+      const skip = (page - 1) * PAGE_SIZE;
+
+      try {
+        const response = await fetch(
+          `https://dummyjson.com/posts?limit=${PAGE_SIZE}&skip=${skip}`,
+          { signal: controller.signal},
+        );
+
+        if(!response.ok){
+          throw new Error(`HTTP error: ${response.status}`);
+        };
+
+        const data: PostsResponse = await response.json();
+
+        if(controller.signal.aborted) return;
+
+        setPosts(data.posts);
+        setTotal(data.total);
+      }
+      catch(e) {
+        if(e instanceof Error && e.name === 'AbortError') return;
+        if(controller.signal.aborted) return;
+        
+        setError('Не удалось загрузить ленту постов');
+      }
+      finally {
+        if(!controller.signal.aborted){
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPosts();
+
+    return () => controller.abort();
+  }, [page]);
+
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <SafeAreaView style={styles.screen}>
+      {loading && <ActivityIndicator size='large'/>}
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      {!loading && error && (
+        <Text style={styles.error}>Ошибка: {error}</Text>
+      )}
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
+      {!loading && !error && (
+      <FlatList<Post>
+      data={posts}
+      renderItem={({item}) => <PostCard post={item}/>}
+      contentContainerStyle={styles.list}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.title}>Лента идей</Text>
+          <Text>Всего постов на сервере: {total}</Text>
+        </View>
+      } 
+      ListEmptyComponent={
+        !loading && !error ? (
+          <View>
+            <Text>Список постов пуст!</Text>
+          </View>
+        ): null
+      }
+      ListFooterComponent={
+        totalPages > 0 ? (
+          <View style={styles.pagination}>
+            <Pressable
+            disabled={page <= 1 || loading}
+            onPress={() => {setPage(p => Math.max(1, p - 1))}}
+            style={styles.button}
+            >
+              <Text>← Назад</Text>
+            </Pressable>
+            <Text>{page} / {totalPages || 1}</Text>
+            <Pressable
+            disabled={page >= totalPages || loading}
+            onPress={() => {setPage(p => p + 1)}}
+            style={styles.button}
+            >
+              <Text>Далее →</Text>
+            </Pressable>
+          </View>
+        ): null
+      }
+      />
+      )}
+    </SafeAreaView>
+  )
+};
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    backgroundColor: '#F3F6F1'
+  },
+  error: {
+    color: 'red',
+    fontSize: 24
   },
   title: {
-    textAlign: 'center',
+    color: '#1E2E25',
+    fontSize: 35,
+    lineHeight: 41,
+    fontWeight: '900',
+    alignSelf: 'center'
   },
-  code: {
-    textTransform: 'uppercase',
+  list: {
+    gap: 12,
+    paddingBottom: 24,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8E0',
   },
+  button: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  
 });
