@@ -1,7 +1,8 @@
+import { NewPostForm } from "@/components/NewPostForm";
 import { PostCard } from "@/components/PostCard";
 import { Post, PostsResponse } from "@/types/posts";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 10;
@@ -9,11 +10,17 @@ const PAGE_SIZE = 10;
 export default function PostsScreen(){
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState(0);
+
+  const [visibilPosts, setVisibilPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -60,6 +67,34 @@ export default function PostsScreen(){
 
     return () => controller.abort();
   }, [page]);
+  
+  
+  useEffect(() => {
+    setVisibilPosts([
+      ...localPosts,
+      ...posts
+      ]);
+  }, [posts, localPosts]);
+
+  useEffect(() => {
+    const q = searchQuery.trim().toLocaleLowerCase();
+
+    const source = [...localPosts, ...posts];
+
+    if(!q) {
+      setVisibilPosts(source);
+      return;
+    };
+
+    const filteredPosts = source.filter((post) => {
+      return post.title.toLocaleLowerCase().includes(q) ||
+        post.body.toLocaleLowerCase().includes(q)       ||
+        post.tags.some((tag) => tag.toLocaleLowerCase().includes(q));
+    });
+
+    setVisibilPosts(filteredPosts);
+
+  }, [searchQuery]);
 
 
   return (
@@ -80,7 +115,7 @@ export default function PostsScreen(){
 
       {!loading && !error && (
       <FlatList<Post>
-      data={posts}
+      data={visibilPosts}
       renderItem={({item}) => <PostCard post={item}/>}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={styles.list}
@@ -93,15 +128,40 @@ export default function PostsScreen(){
               <View style={styles.liveDot} />
               <Text style={styles.liveText}>ОНЛАЙН</Text>
             </View>
+            <Pressable
+              style={styles.addButton}
+              onPress={() => setShowForm(v => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Добавить пост"
+            >
+              <Text style={styles.addButtonText}>＋</Text>
+            </Pressable>
           </View>
           <Text style={styles.title}>Лента<Text style={styles.titleAccent}> идей.</Text></Text>
           <Text style={styles.subtitle}>Истории, мысли и находки сообщества</Text>
           <View style={styles.feedMeta}>
             <Text style={styles.feedMetaLabel}>СЕГОДНЯ В ЛЕНТЕ</Text>
             <View style={styles.totalBadge}>
-              <Text style={styles.totalText}>{total.toLocaleString()} публикаций</Text>
+              <Text style={styles.totalText}>{(total + localPosts.length).toLocaleString()} публикаций</Text>
             </View>
           </View>
+          <View>
+            <TextInput
+              placeholder="Поиск по ленте..."
+              style={styles.searchInput}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          {showForm && (
+            <NewPostForm
+              onCancel={() => setShowForm(false)}
+              onSubmit={(post: Post) => {
+                setLocalPosts(prev => [post, ...prev]);
+                setShowForm(false);
+              }}
+              totalPosts={total + localPosts.length}
+            />
+          )}
         </View>
       } 
       ListEmptyComponent={
@@ -285,6 +345,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  searchInput: {
+    marginTop: 20,
+    paddingHorizontal: 14,
+    height: 42,
+    borderWidth: 1,
+    borderColor: '#DCE4D9',
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 42,
@@ -354,5 +423,20 @@ const styles = StyleSheet.create({
     color: '#879188',
     fontSize: 13,
     fontWeight: '600',
+  },
+  addButton: {
+    marginLeft: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#26382D',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    lineHeight: 22,
+    fontWeight: '700',
   },
 });
