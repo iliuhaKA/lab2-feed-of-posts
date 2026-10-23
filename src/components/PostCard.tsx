@@ -1,5 +1,6 @@
 import { Post } from "@/types/posts";
-import { StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type PostCardProps = {
     post: Post;
@@ -11,6 +12,11 @@ export function PostCard({ post }: PostCardProps) {
     const avatarColor = avatarColors[post.userId % avatarColors.length];
 
     return (
+        <Link href={{
+            pathname: '/posts/[id]' as any,
+            params: {id: String(post.id)},
+        }} asChild>
+        <Pressable>
         <View style={styles.card}>
             <View style={styles.authorRow}>
                 <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
@@ -55,6 +61,8 @@ export function PostCard({ post }: PostCardProps) {
                 </View>
             </View>
         </View>
+        </Pressable>
+        </Link>
     )
 }
 

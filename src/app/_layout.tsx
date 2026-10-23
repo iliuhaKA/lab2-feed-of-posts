@@ -1,11 +1,11 @@
-import { Slot } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style='dark' />
-      <Slot />
-    </>
+    <Stack>
+      <Stack.Screen name='(tabs)' options={{headerShown: false}}/>
+      <Stack.Screen name='posts/[id]' options={{title: 'Подробности поста'}}/>
+      <Stack.Screen name='add-post' options={{title: 'Добавление публикации'}}/>
+    </Stack>
   )
 }

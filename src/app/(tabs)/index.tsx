@@ -1,6 +1,6 @@
-import { NewPostForm } from "@/components/NewPostForm";
 import { PostCard } from "@/components/PostCard";
 import { Post, PostsResponse } from "@/types/posts";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +21,7 @@ export default function PostsScreen(){
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   
+  const router = useRouter();
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -130,7 +131,7 @@ export default function PostsScreen(){
             </View>
             <Pressable
               style={styles.addButton}
-              onPress={() => setShowForm(v => !v)}
+              onPress={() => router.navigate('/add-post')}
               accessibilityRole="button"
               accessibilityLabel="Добавить пост"
             >
@@ -152,16 +153,6 @@ export default function PostsScreen(){
               onChangeText={setSearchQuery}
             />
           </View>
-          {showForm && (
-            <NewPostForm
-              onCancel={() => setShowForm(false)}
-              onSubmit={(post: Post) => {
-                setLocalPosts(prev => [post, ...prev]);
-                setShowForm(false);
-              }}
-              totalPosts={total + localPosts.length}
-            />
-          )}
         </View>
       } 
       ListEmptyComponent={

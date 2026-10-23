@@ -5,10 +5,9 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 type Props = {
   onSubmit: (post: Post) => void;
   onCancel: () => void;
-  totalPosts: number;
 };
 
-export function NewPostForm({ onSubmit, onCancel, totalPosts }: Props) {
+export function NewPostForm({ onSubmit, onCancel }: Props) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
@@ -27,7 +26,7 @@ export function NewPostForm({ onSubmit, onCancel, totalPosts }: Props) {
       .filter(Boolean);
 
     const newPost: Post = {
-      id: totalPosts + 1,
+      id: 1,
       title: title || "Без названия",
       body: body || "",
       tags: tagsArray,
