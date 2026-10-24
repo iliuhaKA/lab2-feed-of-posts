@@ -1,5 +1,6 @@
 import { PostCard } from "@/components/PostCard";
-import { Post, PostsResponse } from "@/types/posts";
+import { usePosts } from "@/hooks/usePosts";
+import { Post } from "@/types/posts";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
@@ -9,66 +10,18 @@ const PAGE_SIZE = 10;
 
 export default function PostsScreen(){
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [localPosts, setLocalPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [page, setPage] = useState<number>(1);
-  const [total, setTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { posts, total, loading, error } = usePosts(page, PAGE_SIZE);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
 
   const [visibilPosts, setVisibilPosts] = useState<Post[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showForm, setShowForm] = useState(false);
   
   const router = useRouter();
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadPosts() {
-      setLoading(true);
-      setError(null);
-
-      const skip = (page - 1) * PAGE_SIZE;
-
-      try {
-        const response = await fetch(
-          `https://dummyjson.com/posts?limit=${PAGE_SIZE}&skip=${skip}`,
-          { signal: controller.signal},
-        );
-
-        if(!response.ok){
-          throw new Error(`HTTP error: ${response.status}`);
-        };
-
-        const data: PostsResponse = await response.json();
-
-        if(controller.signal.aborted) return;
-
-        setPosts(data.posts);
-        setTotal(data.total);
-      }
-      catch(e) {
-        if(e instanceof Error && e.name === 'AbortError') return;
-        if(controller.signal.aborted) return;
-        
-        setError('Не удалось загрузить ленту постов');
-      }
-      finally {
-        if(!controller.signal.aborted){
-          setLoading(false);
-        }
-      }
-    }
-
-    loadPosts();
-
-    return () => controller.abort();
-  }, [page]);
-  
   
   useEffect(() => {
     setVisibilPosts([

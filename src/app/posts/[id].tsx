@@ -1,7 +1,6 @@
 import { DetailedPostCard } from "@/components/DetailedPostCard";
-import { Post } from "@/types/posts";
+import { usePost } from "@/hooks/usePost";
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,50 +9,8 @@ export default function DetailedPostScreen() {
 
     const { id } = useLocalSearchParams<{id: string}>();
 
-    const [post, setPost] = useState<Post | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { post, loading, error } = usePost(id);
 
-    useEffect(() => {
-        const controller = new AbortController();
-    
-        async function loadPost() {
-          setLoading(true);
-          setError(null);
-    
-          try {
-            const response = await fetch(
-              `https://dummyjson.com/posts/${id}`,
-              { signal: controller.signal},
-            );
-    
-            if(!response.ok){
-              throw new Error(`HTTP error: ${response.status}`);
-            };
-    
-            const data : Post = await response.json();
-    
-            if(controller.signal.aborted) return;
-    
-            setPost(data);
-          }
-          catch(e) {
-            if(e instanceof Error && e.name === 'AbortError') return;
-            if(controller.signal.aborted) return;
-            
-            setError('Не удалось загрузить детали поста');
-          }
-          finally {
-            if(!controller.signal.aborted){
-              setLoading(false);
-            }
-          }
-        }
-    
-        loadPost();
-    
-        return () => controller.abort();
-      }, [id]);
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -73,8 +30,8 @@ export default function DetailedPostScreen() {
 
             {!loading && !error && !post && (
                 <View style={styles.errorState}>
-                    <Text style={styles.errorEyebrow}>ЧТО-ТО ПОШЛО НЕ ТАК</Text>
-                    <Text style={styles.error}>{error}</Text>
+                    <Text style={styles.errorEyebrow}>ПОСТ НЕ НАЙДЕН</Text>
+                    <Text style={styles.error}>Не удалось найти эту публикацию</Text>
                 </View>
             )}
         
